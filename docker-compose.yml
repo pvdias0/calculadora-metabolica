@@ -2,6 +2,7 @@ version: "3.8"
 
 services:
   calculadora-metabolica:
+    image: calculadora-metabolica:latest
     build:
       context: .
       dockerfile: Dockerfile

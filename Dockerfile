@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Instala pnpm globalmente e todas as dependências
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+RUN npm install -g pnpm && pnpm install --no-frozen-lockfile
 
 # Copia o código-fonte da aplicação
 COPY . .
@@ -34,7 +34,7 @@ RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
 
 # Instala APENAS dependências de produção (sem devDependencies)
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --no-frozen-lockfile --prod
 
 # Copia arquivos compilados do stage anterior (build otimizado)
 COPY --from=builder /app/.next ./.next
