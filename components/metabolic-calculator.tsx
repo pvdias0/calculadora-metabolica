@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -87,14 +86,14 @@ export function MetabolicCalculator() {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl">Seus Dados</CardTitle>
-          <CardDescription>Preencha as informações abaixo para calcular seu gasto calórico</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="glass rounded-2xl overflow-hidden card-hover">
+        <div className="p-6 sm:p-8">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-foreground">Seus Dados</h3>
+            <p className="text-sm text-muted-foreground mt-1">Preencha as informações para calcular seu gasto calórico</p>
+          </div>
           <form onSubmit={handleCalculate} className="space-y-6">
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="weight">Peso (kg)</Label>
                 <Input
@@ -106,7 +105,7 @@ export function MetabolicCalculator() {
                   min="1"
                   step="0.1"
                   required
-                  className="text-base"
+                  className="text-base h-11 rounded-xl bg-background/50 border-border/60 focus:border-accent focus:ring-accent/20"
                 />
               </div>
 
@@ -121,7 +120,7 @@ export function MetabolicCalculator() {
                   min="1"
                   step="0.1"
                   required
-                  className="text-base"
+                  className="text-base h-11 rounded-xl bg-background/50 border-border/60 focus:border-accent focus:ring-accent/20"
                 />
               </div>
 
@@ -136,14 +135,14 @@ export function MetabolicCalculator() {
                   min="1"
                   max="120"
                   required
-                  className="text-base"
+                  className="text-base h-11 rounded-xl bg-background/50 border-border/60 focus:border-accent focus:ring-accent/20"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label>Sexo</Label>
                 <RadioGroup value={gender} onValueChange={(value) => setGender(value as "male" | "female")}>
-                  <div className="flex items-center space-x-6">
+                  <div className="flex items-center gap-6 h-11">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="male" id="male" />
                       <Label htmlFor="male" className="font-normal cursor-pointer">
@@ -164,7 +163,7 @@ export function MetabolicCalculator() {
             <div className="space-y-2">
               <Label htmlFor="activity">Nível de Atividade Física</Label>
               <Select value={activityLevel} onValueChange={setActivityLevel} required>
-                <SelectTrigger id="activity" className="text-base">
+                <SelectTrigger id="activity" className="text-base h-11 rounded-xl bg-background/50 border-border/60">
                   <SelectValue placeholder="Selecione seu nível de atividade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -178,86 +177,100 @@ export function MetabolicCalculator() {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit" className="flex-1 h-11 text-base">
+              <Button
+                type="submit"
+                className="flex-1 h-12 text-base rounded-xl font-semibold
+                           bg-linear-to-r from-accent to-primary text-white
+                           shadow-lg shadow-accent/20
+                           hover:shadow-xl hover:shadow-accent/30 hover:-translate-y-0.5
+                           transition-all duration-300"
+              >
                 <Activity className="mr-2 h-5 w-5" />
                 Calcular
               </Button>
               {result && (
-                <Button type="button" variant="outline" onClick={resetForm} className="h-11 text-base bg-transparent">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={resetForm}
+                  className="h-12 text-base rounded-xl bg-transparent border-border/60 hover:bg-muted/50"
+                >
                   Limpar
                 </Button>
               )}
             </div>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {result && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="shadow-lg border-accent/20">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-2xl">Seus Resultados</CardTitle>
-              <CardDescription>Baseado na fórmula Mifflin-St Jeor e seu nível de atividade</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Results */}
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="p-6 sm:p-8">
+              <div className="mb-5">
+                <h3 className="text-xl font-bold text-foreground">Seus Resultados</h3>
+                <p className="text-sm text-muted-foreground mt-1">Baseado na fórmula Mifflin-St Jeor</p>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-lg bg-muted/50 p-4 space-y-1">
-                  <p className="text-sm text-muted-foreground font-medium">Taxa Metabólica Basal (TMB)</p>
-                  <p className="text-3xl font-bold text-foreground">{result.bmr} kcal</p>
+                <div className="rounded-xl bg-muted/40 p-5 space-y-1.5">
+                  <p className="text-sm text-muted-foreground font-medium">Taxa Metabólica Basal</p>
+                  <p className="text-4xl font-bold text-foreground tracking-tight">{result.bmr}<span className="text-lg font-normal text-muted-foreground ml-1">kcal</span></p>
                   <p className="text-xs text-muted-foreground">Calorias em repouso</p>
                 </div>
 
-                <div className="rounded-lg bg-accent/10 p-4 space-y-1 border border-accent/20">
-                  <p className="text-sm text-accent-foreground font-medium">Gasto Calórico Total (GET)</p>
-                  <p className="text-3xl font-bold text-accent">{result.tdee} kcal</p>
+                <div className="rounded-xl p-5 space-y-1.5 bg-linear-to-br from-accent/10 to-primary/10 border border-accent/15">
+                  <p className="text-sm text-accent font-medium">Gasto Calórico Total</p>
+                  <p className="text-4xl font-bold text-foreground tracking-tight">{result.tdee}<span className="text-lg font-normal text-muted-foreground ml-1">kcal</span></p>
                   <p className="text-xs text-muted-foreground">Calorias diárias totais</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl">Dicas de Controle de Peso</CardTitle>
-              <CardDescription>Ajuste suas calorias diárias conforme seu objetivo</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="h-5 w-5 text-destructive" />
-                  <h3 className="font-semibold text-foreground">Perder Peso</h3>
+          {/* Tips */}
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="p-6 sm:p-8">
+              <div className="mb-5">
+                <h3 className="text-xl font-bold text-foreground">Controle de Peso</h3>
+                <p className="text-sm text-muted-foreground mt-1">Ajuste suas calorias conforme seu objetivo</p>
+              </div>
+              <div className="stagger-children space-y-3">
+                <div className="rounded-xl border border-destructive/15 bg-destructive/5 p-5 space-y-2 card-hover">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="h-5 w-5 text-destructive" />
+                    <h4 className="font-semibold text-foreground">Perder Peso</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Déficit de 400 kcal/dia ≈ 0.5 kg/semana</p>
+                  <p className="text-3xl font-bold text-foreground tracking-tight">{result.weightLoss}<span className="text-sm font-normal text-muted-foreground ml-1">kcal/dia</span></p>
                 </div>
-                <p className="text-sm text-muted-foreground">Déficit de 400 kcal/dia ≈ 0.5 kg/semana</p>
-                <p className="text-2xl font-bold text-foreground">{result.weightLoss} kcal/dia</p>
-              </div>
 
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Minus className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-foreground">Manter Peso</h3>
+                <div className="rounded-xl border border-accent/15 bg-accent/5 p-5 space-y-2 card-hover">
+                  <div className="flex items-center gap-2">
+                    <Minus className="h-5 w-5 text-accent" />
+                    <h4 className="font-semibold text-foreground">Manter Peso</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Consumir suas calorias de manutenção</p>
+                  <p className="text-3xl font-bold text-foreground tracking-tight">{result.maintain}<span className="text-sm font-normal text-muted-foreground ml-1">kcal/dia</span></p>
                 </div>
-                <p className="text-sm text-muted-foreground">Consumir aproximadamente suas calorias de manutenção</p>
-                <p className="text-2xl font-bold text-foreground">{result.maintain} kcal/dia</p>
-              </div>
 
-              <div className="rounded-lg border border-accent/20 bg-accent/5 p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-accent" />
-                  <h3 className="font-semibold text-foreground">Ganhar Peso</h3>
+                <div className="rounded-xl border border-primary/15 bg-primary/5 p-5 space-y-2 card-hover">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <h4 className="font-semibold text-foreground">Ganhar Peso</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Superávit de 400 kcal/dia ≈ 0.5 kg/semana</p>
+                  <p className="text-3xl font-bold text-foreground tracking-tight">{result.weightGain}<span className="text-sm font-normal text-muted-foreground ml-1">kcal/dia</span></p>
                 </div>
-                <p className="text-sm text-muted-foreground">Superávit de 400 kcal/dia ≈ 0.5 kg/semana</p>
-                <p className="text-2xl font-bold text-foreground">{result.weightGain} kcal/dia</p>
-              </div>
 
-              <div className="rounded-lg bg-muted/30 p-4 mt-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  <span className="font-semibold text-foreground">Importante:</span> Estes valores são estimativas. Para
-                  resultados mais precisos e personalizados, consulte um nutricionista ou profissional de saúde
-                  qualificado.
-                </p>
+                <div className="rounded-xl bg-muted/30 p-4 mt-2">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    <span className="font-semibold text-foreground">Importante:</span> Estes valores são estimativas. Consulte um nutricionista para resultados personalizados.
+                  </p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
     </div>
