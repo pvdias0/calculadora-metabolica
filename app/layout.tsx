@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description:
     "Calcule seu gasto calórico diário usando a fórmula Mifflin-St Jeor e receba dicas personalizadas de controle de peso",
   generator: "v0.app",
+  verification: {
+    google: "oetDOC7Cu48sNzcu9R3d15drh0cqt4zDkO7abPES3VA",
+  },
   icons: {
     icon: [
       {
