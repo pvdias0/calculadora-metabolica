@@ -1,4 +1,5 @@
 import { MetabolicCalculator } from "@/components/metabolic-calculator";
+import { FloatingThemeToggle } from "@/components/floating-theme-toggle";
 import {
   Brain,
   TrendingUp,
@@ -417,6 +418,9 @@ export default function Home() {
           <span>Fórmula Mifflin-St Jeor • {new Date().getFullYear()}</span>
         </div>
       </footer>
+
+      {/* Floating Theme Toggle */}
+      <FloatingThemeToggle />
     </main>
   );
 }
