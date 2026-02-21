@@ -21,14 +21,7 @@ export function ThemeToggle() {
   }, []);
 
   if (!mounted) {
-    return (
-      <Button
-        variant="ghost"
-        size="icon"
-        disabled
-        className="w-9 h-9"
-      />
-    );
+    return <Button variant="ghost" size="icon" disabled className="w-9 h-9" />;
   }
 
   const currentTheme = theme || "system";
