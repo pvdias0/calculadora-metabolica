@@ -77,8 +77,22 @@ function obterOriginsPermitidas(request: Request) {
   return Array.from(new Set([...configuradas, `${proto}://${host}`]));
 }
 
+function extrairOriginValida(cabecalho: string | null) {
+  if (!cabecalho) {
+    return null;
+  }
+
+  try {
+    return new URL(cabecalho).origin;
+  } catch {
+    return null;
+  }
+}
+
 export function validarOriginDaRequisicao(request: Request) {
-  const origin = request.headers.get("origin");
+  const origin =
+    request.headers.get("origin") ??
+    extrairOriginValida(request.headers.get("referer"));
   const permitidas = obterOriginsPermitidas(request);
 
   if (!origin) {
