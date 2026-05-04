@@ -59,6 +59,32 @@ pnpm install
 pnpm dev
 ```
 
+Para habilitar a geração de dieta com IA, crie um arquivo `.env.local` com:
+
+```bash
+GEMINI_API_KEY=sua-chave-aqui
+# Opcional
+GEMINI_MODEL=gemini-2.5-flash
+DIETA_MIN_INTERVAL_MS=6000
+DIETA_MAX_TENTATIVAS=3
+DIETA_RATE_LIMIT_BACKOFF_MS=15000
+DIETA_RATE_LIMIT_WINDOW_MS=60000
+DIETA_RATE_LIMIT_MAX_REQUESTS=4
+DIETA_MAX_PENDING_JOBS_PER_IP=2
+DIETA_JOB_TTL_MS=1800000
+DIETA_JOB_CLEANUP_INTERVAL_MS=60000
+ALLOWED_ORIGINS=http://localhost:3000,https://seudominio.com
+DIETA_CAPTCHA_REQUIRED=false
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
+```
+
+Para ambiente público, recomenda-se:
+
+- preencher `ALLOWED_ORIGINS` com os domínios reais da aplicação
+- habilitar `TURNSTILE_SECRET_KEY` e `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+- opcionalmente forçar o CAPTCHA com `DIETA_CAPTCHA_REQUIRED=true`
+
 A aplicação estará disponível em `http://localhost:3000`
 
 ### Build para Produção

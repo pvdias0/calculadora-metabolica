@@ -2,10 +2,13 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { TurnstileWidget } from "@/components/turnstile-widget";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -14,47 +17,96 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Activity, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import {
+  Activity,
+  Clock3,
+  TrendingDown,
+  TrendingUp,
+  Minus,
+} from "lucide-react";
+import { objetivosDieta } from "@/lib/dieta";
+import type { ObjetivoDieta } from "@/lib/dieta";
+import type { StatusFilaDieta } from "@/lib/fila-dieta";
 
-interface CalculatorResult {
-  bmr: number;
-  tdee: number;
-  weightLoss: number;
-  weightGain: number;
-  maintain: number;
+interface ResultadoCalculadora {
+  tmb: number;
+  get: number;
+  emagrecimento: number;
+  manutencao: number;
+  hipertrofia: number;
+}
+
+interface RespostaCriacaoJobDieta {
+  jobId?: string;
+  status?: StatusFilaDieta;
+  calorias?: number;
+  objetivo?: ObjetivoDieta;
+  posicaoNaFila?: number | null;
+  tempoEstimadoSegundos?: number | null;
+  captchaObrigatorio?: boolean;
+  erro?: string;
+}
+
+interface RespostaStatusJobDieta extends RespostaCriacaoJobDieta {
+  dieta?: string;
+  tentativas?: number;
+}
+
+interface SolicitacaoDietaAtiva {
+  jobId: string;
+  status: StatusFilaDieta;
+  calorias: number;
+  objetivo: ObjetivoDieta;
+  posicaoNaFila: number | null;
+  tempoEstimadoSegundos: number | null;
+  erro?: string;
+}
+
+interface DietaGerada {
+  conteudo: string;
+  calorias: number;
+  objetivo: ObjetivoDieta;
 }
 
 export function MetabolicCalculator() {
-  const [weight, setWeight] = useState("");
-  const [height, setHeight] = useState("");
-  const [age, setAge] = useState("");
-  const [gender, setGender] = useState<"male" | "female">("male");
-  const [activityLevel, setActivityLevel] = useState("");
-  const [result, setResult] = useState<CalculatorResult | null>(null);
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const [peso, setPeso] = useState("");
+  const [altura, setAltura] = useState("");
+  const [idade, setIdade] = useState("");
+  const [sexo, setSexo] = useState<"masculino" | "feminino">("masculino");
+  const [nivelAtividade, setNivelAtividade] = useState("");
+  const [resultado, setResultado] = useState<ResultadoCalculadora | null>(null);
+  const [objetivoCarregando, setObjetivoCarregando] =
+    useState<ObjetivoDieta | null>(null);
+  const [dietaGerada, setDietaGerada] = useState<DietaGerada | null>(null);
+  const [solicitacaoAtiva, setSolicitacaoAtiva] =
+    useState<SolicitacaoDietaAtiva | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaVersao, setCaptchaVersao] = useState(0);
 
-  const calculateBMR = () => {
-    const w = Number.parseFloat(weight);
-    const h = Number.parseFloat(height);
-    const a = Number.parseFloat(age);
+  const calcularTmb = () => {
+    const pesoAtual = Number.parseFloat(peso);
+    const alturaAtual = Number.parseFloat(altura);
+    const idadeAtual = Number.parseFloat(idade);
 
-    if (gender === "male") {
-      return 10 * w + 6.25 * h - 5 * a + 5;
+    if (sexo === "masculino") {
+      return 10 * pesoAtual + 6.25 * alturaAtual - 5 * idadeAtual + 5;
     } else {
-      return 10 * w + 6.25 * h - 5 * a - 161;
+      return 10 * pesoAtual + 6.25 * alturaAtual - 5 * idadeAtual - 161;
     }
   };
 
-  const getActivityMultiplier = (level: string) => {
-    switch (level) {
-      case "sedentary":
+  const obterMultiplicadorAtividade = (nivel: string) => {
+    switch (nivel) {
+      case "sedentario":
         return 1.2;
-      case "light":
+      case "leve":
         return 1.375;
-      case "moderate":
+      case "moderado":
         return 1.55;
-      case "active":
+      case "ativo":
         return 1.725;
-      case "very-active":
+      case "muito-ativo":
         return 1.9;
       default:
         return 1.2;
@@ -64,31 +116,174 @@ export function MetabolicCalculator() {
   const handleCalculate = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!weight || !height || !age || !activityLevel) {
+    if (!peso || !altura || !idade || !nivelAtividade) {
       return;
     }
 
-    const bmr = calculateBMR();
-    const multiplier = getActivityMultiplier(activityLevel);
-    const tdee = bmr * multiplier;
+    const tmb = calcularTmb();
+    const multiplicador = obterMultiplicadorAtividade(nivelAtividade);
+    const get = tmb * multiplicador;
 
-    setResult({
-      bmr: Math.round(bmr),
-      tdee: Math.round(tdee),
-      weightLoss: Math.round(tdee - 400),
-      weightGain: Math.round(tdee + 400),
-      maintain: Math.round(tdee),
+    setResultado({
+      tmb: Math.round(tmb),
+      get: Math.round(get),
+      emagrecimento: Math.round(get - 400),
+      hipertrofia: Math.round(get + 400),
+      manutencao: Math.round(get),
     });
+    setObjetivoCarregando(null);
+    setSolicitacaoAtiva(null);
+    setDietaGerada(null);
+    setCaptchaToken(null);
+    setCaptchaVersao((versao) => versao + 1);
   };
 
   const resetForm = () => {
-    setWeight("");
-    setHeight("");
-    setAge("");
-    setGender("male");
-    setActivityLevel("");
-    setResult(null);
+    setPeso("");
+    setAltura("");
+    setIdade("");
+    setSexo("masculino");
+    setNivelAtividade("");
+    setResultado(null);
+    setObjetivoCarregando(null);
+    setDietaGerada(null);
+    setSolicitacaoAtiva(null);
+    setCaptchaToken(null);
+    setCaptchaVersao((versao) => versao + 1);
   };
+
+  const gerarDieta = async (objetivo: ObjetivoDieta) => {
+    if (!resultado) {
+      return;
+    }
+
+    if (turnstileSiteKey && !captchaToken) {
+      toast.error("Confirme o CAPTCHA antes de solicitar a dieta.");
+      return;
+    }
+
+    const calorias = resultado[objetivo];
+    setObjetivoCarregando(objetivo);
+
+    try {
+      const response = await fetch("/api/dieta", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          objetivo,
+          calorias,
+          captchaToken,
+        }),
+      });
+
+      const dados = (await response.json()) as RespostaCriacaoJobDieta;
+
+      if (
+        !response.ok ||
+        !dados.jobId ||
+        !dados.status ||
+        !dados.objetivo ||
+        !dados.calorias
+      ) {
+        throw new Error(
+          dados.erro ||
+            "Não foi possível iniciar a geração da dieta para esse objetivo.",
+        );
+      }
+
+      setDietaGerada(null);
+      setSolicitacaoAtiva({
+        jobId: dados.jobId,
+        status: dados.status,
+        calorias: dados.calorias,
+        objetivo: dados.objetivo,
+        posicaoNaFila: dados.posicaoNaFila ?? null,
+        tempoEstimadoSegundos: dados.tempoEstimadoSegundos ?? null,
+      });
+      setCaptchaToken(null);
+      setCaptchaVersao((versao) => versao + 1);
+    } catch (error) {
+      const mensagemErro =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível gerar a dieta agora.";
+
+      setObjetivoCarregando(null);
+      toast.error(mensagemErro);
+    }
+  };
+
+  useEffect(() => {
+    if (
+      !solicitacaoAtiva ||
+      (solicitacaoAtiva.status !== "pendente" &&
+        solicitacaoAtiva.status !== "processando")
+    ) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/dieta/${solicitacaoAtiva.jobId}`, {
+          cache: "no-store",
+        });
+
+        const dados = (await response.json()) as RespostaStatusJobDieta;
+
+        if (!response.ok || !dados.status || !dados.objetivo || !dados.calorias) {
+          throw new Error(
+            dados.erro ||
+              "Não foi possível consultar o andamento da geração da dieta.",
+          );
+        }
+
+        if (dados.status === "concluido" && dados.dieta) {
+          setDietaGerada({
+            conteudo: dados.dieta,
+            calorias: dados.calorias,
+            objetivo: dados.objetivo,
+          });
+          setSolicitacaoAtiva(null);
+          setObjetivoCarregando(null);
+          return;
+        }
+
+        if (dados.status === "erro") {
+          setSolicitacaoAtiva(null);
+          setObjetivoCarregando(null);
+          toast.error(
+            dados.erro || "Não foi possível gerar a dieta para esse objetivo.",
+          );
+          return;
+        }
+
+        setSolicitacaoAtiva({
+          jobId: solicitacaoAtiva.jobId,
+          status: dados.status,
+          calorias: dados.calorias,
+          objetivo: dados.objetivo,
+          posicaoNaFila: dados.posicaoNaFila ?? null,
+          tempoEstimadoSegundos: dados.tempoEstimadoSegundos ?? null,
+          erro: dados.erro,
+        });
+      } catch (error) {
+        const mensagemErro =
+          error instanceof Error
+            ? error.message
+            : "Não foi possível atualizar o andamento da dieta.";
+
+        setSolicitacaoAtiva(null);
+        setObjetivoCarregando(null);
+        toast.error(mensagemErro);
+      }
+    }, 2500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [solicitacaoAtiva]);
 
   return (
     <div className="space-y-6">
@@ -108,8 +303,8 @@ export function MetabolicCalculator() {
                   id="weight"
                   type="number"
                   placeholder="Ex: 70"
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
+                  value={peso}
+                  onChange={(e) => setPeso(e.target.value)}
                   min="1"
                   step="0.1"
                   required
@@ -123,8 +318,8 @@ export function MetabolicCalculator() {
                   id="height"
                   type="number"
                   placeholder="Ex: 170"
-                  value={height}
-                  onChange={(e) => setHeight(e.target.value)}
+                  value={altura}
+                  onChange={(e) => setAltura(e.target.value)}
                   min="1"
                   step="0.1"
                   required
@@ -138,8 +333,8 @@ export function MetabolicCalculator() {
                   id="age"
                   type="number"
                   placeholder="Ex: 30"
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
+                  value={idade}
+                  onChange={(e) => setIdade(e.target.value)}
                   min="1"
                   max="120"
                   required
@@ -150,14 +345,14 @@ export function MetabolicCalculator() {
               <div className="space-y-2">
                 <Label>Sexo</Label>
                 <RadioGroup
-                  value={gender}
+                  value={sexo}
                   onValueChange={(value) =>
-                    setGender(value as "male" | "female")
+                    setSexo(value as "masculino" | "feminino")
                   }
                 >
                   <div className="flex items-center gap-6 h-11">
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="male" id="male" />
+                      <RadioGroupItem value="masculino" id="male" />
                       <Label
                         htmlFor="male"
                         className="font-normal cursor-pointer"
@@ -166,7 +361,7 @@ export function MetabolicCalculator() {
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="female" id="female" />
+                      <RadioGroupItem value="feminino" id="female" />
                       <Label
                         htmlFor="female"
                         className="font-normal cursor-pointer"
@@ -182,8 +377,8 @@ export function MetabolicCalculator() {
             <div className="space-y-2">
               <Label htmlFor="activity">Nível de Atividade Física</Label>
               <Select
-                value={activityLevel}
-                onValueChange={setActivityLevel}
+                value={nivelAtividade}
+                onValueChange={setNivelAtividade}
                 required
               >
                 <SelectTrigger
@@ -193,24 +388,37 @@ export function MetabolicCalculator() {
                   <SelectValue placeholder="Selecione seu nível de atividade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sedentary">
+                  <SelectItem value="sedentario">
                     Sedentário (pouco ou nenhum exercício)
                   </SelectItem>
-                  <SelectItem value="light">
+                  <SelectItem value="leve">
                     Levemente ativo (exercício 1-3 dias/semana)
                   </SelectItem>
-                  <SelectItem value="moderate">
+                  <SelectItem value="moderado">
                     Moderadamente ativo (exercício 3-5 dias/semana)
                   </SelectItem>
-                  <SelectItem value="active">
+                  <SelectItem value="ativo">
                     Muito ativo (exercício 6-7 dias/semana)
                   </SelectItem>
-                  <SelectItem value="very-active">
+                  <SelectItem value="muito-ativo">
                     Extremamente ativo (exercício intenso diário)
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {turnstileSiteKey && (
+              <div className="space-y-2">
+                <Label>Verificação de segurança</Label>
+                <div className="rounded-xl border border-border/60 bg-background/50 p-3">
+                  <TurnstileWidget
+                    key={captchaVersao}
+                    siteKey={turnstileSiteKey}
+                    onTokenChange={setCaptchaToken}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <Button
@@ -224,7 +432,7 @@ export function MetabolicCalculator() {
                 <Activity className="mr-2 h-5 w-5" />
                 Calcular
               </Button>
-              {result && (
+              {resultado && (
                 <Button
                   type="button"
                   variant="outline"
@@ -239,7 +447,7 @@ export function MetabolicCalculator() {
         </div>
       </div>
 
-      {result && (
+      {resultado && (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Results */}
           <div className="glass rounded-2xl overflow-hidden">
@@ -258,7 +466,7 @@ export function MetabolicCalculator() {
                     Taxa Metabólica Basal
                   </p>
                   <p className="text-4xl font-bold text-foreground tracking-tight">
-                    {result.bmr}
+                    {resultado.tmb}
                     <span className="text-lg font-normal text-muted-foreground ml-1">
                       kcal
                     </span>
@@ -273,7 +481,7 @@ export function MetabolicCalculator() {
                     Gasto Calórico Total
                   </p>
                   <p className="text-4xl font-bold text-foreground tracking-tight">
-                    {result.tdee}
+                    {resultado.get}
                     <span className="text-lg font-normal text-muted-foreground ml-1">
                       kcal
                     </span>
@@ -298,59 +506,161 @@ export function MetabolicCalculator() {
                 </p>
               </div>
               <div className="stagger-children space-y-3">
-                <div className="rounded-xl border border-destructive/15 bg-destructive/5 p-5 space-y-2 card-hover">
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="h-5 w-5 text-destructive" />
-                    <h4 className="font-semibold text-foreground">
-                      Perder Peso
-                    </h4>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Déficit de 400 kcal/dia ≈ 0.5 kg/semana
-                  </p>
-                  <p className="text-3xl font-bold text-foreground tracking-tight">
-                    {result.weightLoss}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">
-                      kcal/dia
-                    </span>
-                  </p>
-                </div>
+                {objetivosDieta.map((objetivo) => {
+                  const configuracaoVisual =
+                    objetivo.id === "emagrecimento"
+                      ? {
+                          Icon: TrendingDown,
+                          className:
+                            "border-destructive/15 bg-destructive/5",
+                          iconClassName: "text-destructive",
+                        }
+                      : objetivo.id === "manutencao"
+                        ? {
+                            Icon: Minus,
+                            className: "border-accent/15 bg-accent/5",
+                            iconClassName: "text-accent",
+                          }
+                        : {
+                            Icon: TrendingUp,
+                            className: "border-primary/15 bg-primary/5",
+                            iconClassName: "text-primary",
+                          };
 
-                <div className="rounded-xl border border-accent/15 bg-accent/5 p-5 space-y-2 card-hover">
-                  <div className="flex items-center gap-2">
-                    <Minus className="h-5 w-5 text-accent" />
-                    <h4 className="font-semibold text-foreground">
-                      Manter Peso
-                    </h4>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Consumir suas calorias de manutenção
-                  </p>
-                  <p className="text-3xl font-bold text-foreground tracking-tight">
-                    {result.maintain}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">
-                      kcal/dia
-                    </span>
-                  </p>
-                </div>
+                  const selecionado = dietaGerada?.objetivo === objetivo.id;
+                  const caloriasObjetivo = resultado[objetivo.id];
 
-                <div className="rounded-xl border border-primary/15 bg-primary/5 p-5 space-y-2 card-hover">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    <h4 className="font-semibold text-foreground">
-                      Ganhar Peso
-                    </h4>
+                  return (
+                    <div
+                      key={objetivo.id}
+                      className={`rounded-xl border p-5 space-y-4 card-hover ${configuracaoVisual.className} ${selecionado ? "ring-1 ring-accent/40" : ""}`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <configuracaoVisual.Icon
+                            className={`h-5 w-5 ${configuracaoVisual.iconClassName}`}
+                          />
+                          <h4 className="font-semibold text-foreground">
+                            {objetivo.titulo}
+                          </h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {objetivo.descricaoCard}
+                        </p>
+                        <p className="text-3xl font-bold text-foreground tracking-tight">
+                          {caloriasObjetivo}
+                          <span className="text-sm font-normal text-muted-foreground ml-1">
+                            kcal/dia
+                          </span>
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void gerarDieta(objetivo.id)}
+                        disabled={objetivoCarregando !== null}
+                        className="w-full rounded-xl border-border/60 bg-background/70 hover:bg-background"
+                      >
+                        {objetivoCarregando === objetivo.id ? (
+                          <>
+                            <Spinner className="size-4" />
+                            {solicitacaoAtiva?.status === "pendente"
+                              ? "Entrando na fila..."
+                              : "Gerando dieta..."}
+                          </>
+                        ) : (
+                          "Gerar dieta com IA"
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })}
+
+                {solicitacaoAtiva && (
+                  <div className="rounded-xl border border-accent/15 bg-accent/5 p-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Clock3 className="h-4 w-4 text-accent" />
+                      <p className="text-sm font-semibold text-foreground">
+                        Dieta em processamento
+                      </p>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {solicitacaoAtiva.status === "pendente"
+                        ? "Sua solicitação entrou na fila. Assim que chegar a vez dela, vamos gerar a dieta automaticamente."
+                        : "Sua solicitação está sendo processada pelo Gemini agora."}
+                    </p>
+
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl bg-background/80 p-3">
+                        <p className="text-xs text-muted-foreground">Objetivo</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {
+                            objetivosDieta.find(
+                              (objetivo) =>
+                                objetivo.id === solicitacaoAtiva.objetivo,
+                            )?.titulo
+                          }
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-background/80 p-3">
+                        <p className="text-xs text-muted-foreground">
+                          Posição na fila
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {solicitacaoAtiva.posicaoNaFila ?? "Processando"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-background/80 p-3">
+                        <p className="text-xs text-muted-foreground">
+                          Tempo estimado
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {solicitacaoAtiva.tempoEstimadoSegundos !== null
+                            ? `${solicitacaoAtiva.tempoEstimadoSegundos}s`
+                            : "Em andamento"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      O limite do provedor é controlado no servidor para evitar
+                      excesso de requisições simultâneas.
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Superávit de 400 kcal/dia ≈ 0.5 kg/semana
-                  </p>
-                  <p className="text-3xl font-bold text-foreground tracking-tight">
-                    {result.weightGain}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">
-                      kcal/dia
-                    </span>
-                  </p>
-                </div>
+                )}
+
+                {dietaGerada && (
+                  <div className="rounded-xl border border-accent/15 bg-background/70 p-5 space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-accent">
+                        Dieta aproximada com IA
+                      </p>
+                      <h4 className="text-lg font-semibold text-foreground">
+                        {
+                          objetivosDieta.find(
+                            (objetivo) => objetivo.id === dietaGerada.objetivo,
+                          )?.titulo
+                        }
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        Meta calórica: {dietaGerada.calorias} kcal/dia
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-muted/30 p-4">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                        {dietaGerada.conteudo}
+                      </p>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Esta dieta é uma sugestão aproximada gerada por IA.
+                      Ajustes individuais devem ser feitos com um nutricionista.
+                    </p>
+                  </div>
+                )}
 
                 <div className="rounded-xl bg-muted/30 p-4 mt-2">
                   <p className="text-sm text-muted-foreground leading-relaxed">
