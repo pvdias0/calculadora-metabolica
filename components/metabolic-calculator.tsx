@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -79,6 +79,8 @@ interface DietaGerada {
 
 export function MetabolicCalculator() {
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const resultadosRef = useRef<HTMLDivElement | null>(null);
+  const respostaDietaRef = useRef<HTMLDivElement | null>(null);
   const [peso, setPeso] = useState("");
   const [altura, setAltura] = useState("");
   const [idade, setIdade] = useState("");
@@ -173,6 +175,29 @@ export function MetabolicCalculator() {
     0,
   );
 
+  const scrollToSection = (element: HTMLDivElement | null) => {
+    if (!element || typeof window === "undefined") {
+      return;
+    }
+
+    const prefersReducedMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const scroll = () => {
+      element.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+    };
+
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(scroll);
+      return;
+    }
+
+    scroll();
+  };
+
   const baixarPdfDieta = async () => {
     if (!dietaGerada) {
       return;
@@ -227,6 +252,7 @@ export function MetabolicCalculator() {
 
     const calorias = resultado[objetivo];
     setObjetivoCarregando(objetivo);
+    scrollToSection(respostaDietaRef.current);
 
     try {
       const response = await fetch("/api/dieta", {
@@ -277,6 +303,14 @@ export function MetabolicCalculator() {
       toast.error(mensagemErro);
     }
   };
+
+  useEffect(() => {
+    if (!resultado) {
+      return;
+    }
+
+    scrollToSection(resultadosRef.current);
+  }, [resultado]);
 
   useEffect(() => {
     if (
@@ -511,7 +545,10 @@ export function MetabolicCalculator() {
       </div>
 
       {resultado && (
-        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div
+          ref={resultadosRef}
+          className="space-y-5 scroll-mt-24 animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
           {/* Results */}
           <div className="glass rounded-2xl overflow-hidden">
             <div className="p-6 sm:p-8">
@@ -641,6 +678,8 @@ export function MetabolicCalculator() {
                 })}
 
               </div>
+
+              <div ref={respostaDietaRef} className="scroll-mt-24" />
 
               {solicitacaoAtiva && (
                 <div className="mt-4 rounded-xl border border-accent/15 bg-accent/5 p-5 space-y-3">
