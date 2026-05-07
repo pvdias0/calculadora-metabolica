@@ -74,16 +74,11 @@ DIETA_MAX_PENDING_JOBS_PER_IP=2
 DIETA_JOB_TTL_MS=1800000
 DIETA_JOB_CLEANUP_INTERVAL_MS=60000
 ALLOWED_ORIGINS=http://localhost:3000,https://seudominio.com
-DIETA_CAPTCHA_REQUIRED=false
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=
-TURNSTILE_SECRET_KEY=
 ```
 
 Para ambiente público, recomenda-se:
 
 - preencher `ALLOWED_ORIGINS` com os domínios reais da aplicação
-- habilitar `TURNSTILE_SECRET_KEY` e `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
-- opcionalmente forçar o CAPTCHA com `DIETA_CAPTCHA_REQUIRED=true`
 
 A aplicação estará disponível em `http://localhost:3000`
 

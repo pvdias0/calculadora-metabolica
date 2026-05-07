@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { TurnstileWidget } from "@/components/turnstile-widget";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -52,7 +51,6 @@ interface RespostaCriacaoJobDieta {
   objetivo?: ObjetivoDieta;
   posicaoNaFila?: number | null;
   tempoEstimadoSegundos?: number | null;
-  captchaObrigatorio?: boolean;
   erro?: string;
 }
 
@@ -78,7 +76,6 @@ interface DietaGerada {
 }
 
 export function MetabolicCalculator() {
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const resultadosRef = useRef<HTMLDivElement | null>(null);
   const respostaDietaRef = useRef<HTMLDivElement | null>(null);
   const [peso, setPeso] = useState("");
@@ -92,8 +89,6 @@ export function MetabolicCalculator() {
   const [dietaGerada, setDietaGerada] = useState<DietaGerada | null>(null);
   const [solicitacaoAtiva, setSolicitacaoAtiva] =
     useState<SolicitacaoDietaAtiva | null>(null);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [captchaVersao, setCaptchaVersao] = useState(0);
   const [baixandoPdf, setBaixandoPdf] = useState(false);
 
   const calcularTmb = () => {
@@ -146,8 +141,6 @@ export function MetabolicCalculator() {
     setObjetivoCarregando(null);
     setSolicitacaoAtiva(null);
     setDietaGerada(null);
-    setCaptchaToken(null);
-    setCaptchaVersao((versao) => versao + 1);
   };
 
   const resetForm = () => {
@@ -160,8 +153,6 @@ export function MetabolicCalculator() {
     setObjetivoCarregando(null);
     setDietaGerada(null);
     setSolicitacaoAtiva(null);
-    setCaptchaToken(null);
-    setCaptchaVersao((versao) => versao + 1);
   };
 
   const objetivoDietaGerada = dietaGerada
@@ -245,11 +236,6 @@ export function MetabolicCalculator() {
       return;
     }
 
-    if (turnstileSiteKey && !captchaToken) {
-      toast.error("Confirme o CAPTCHA antes de solicitar a dieta.");
-      return;
-    }
-
     const calorias = resultado[objetivo];
     setObjetivoCarregando(objetivo);
     scrollToSection(respostaDietaRef.current);
@@ -263,7 +249,6 @@ export function MetabolicCalculator() {
         body: JSON.stringify({
           objetivo,
           calorias,
-          captchaToken,
         }),
       });
 
@@ -291,8 +276,6 @@ export function MetabolicCalculator() {
         posicaoNaFila: dados.posicaoNaFila ?? null,
         tempoEstimadoSegundos: dados.tempoEstimadoSegundos ?? null,
       });
-      setCaptchaToken(null);
-      setCaptchaVersao((versao) => versao + 1);
     } catch (error) {
       const mensagemErro =
         error instanceof Error
@@ -503,19 +486,6 @@ export function MetabolicCalculator() {
                 </SelectContent>
               </Select>
             </div>
-
-            {turnstileSiteKey && (
-              <div className="space-y-2">
-                <Label>Verificação de segurança</Label>
-                <div className="rounded-xl border border-border/60 bg-background/50 p-3">
-                  <TurnstileWidget
-                    key={captchaVersao}
-                    siteKey={turnstileSiteKey}
-                    onTokenChange={setCaptchaToken}
-                  />
-                </div>
-              </div>
-            )}
 
             <div className="flex gap-3 pt-2">
               <Button

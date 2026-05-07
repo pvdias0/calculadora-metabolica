@@ -7,11 +7,9 @@ import {
 import { ehObjetivoDieta } from "@/lib/dieta";
 import {
   aplicarRateLimitPorIp,
-  captchaObrigatorio,
   ErroSegurancaDieta,
   limparEstadoRateLimit,
   obterIpDaRequisicao,
-  validarCaptchaTurnstile,
   validarOriginDaRequisicao,
 } from "@/lib/seguranca-dieta";
 import type { ObjetivoDieta } from "@/lib/dieta";
@@ -22,7 +20,6 @@ export const dynamic = "force-dynamic";
 interface RequisicaoDieta {
   calorias?: number;
   objetivo?: string;
-  captchaToken?: string;
 }
 
 function validarCorpo(corpo: RequisicaoDieta): {
@@ -96,11 +93,6 @@ export async function POST(request: Request) {
       );
     }
 
-    await validarCaptchaTurnstile({
-      token: corpo.captchaToken,
-      ip,
-    });
-
     const { calorias, objetivo } = validarCorpo(corpo);
     const job = criarJobDieta({ ip, calorias, objetivo });
 
@@ -112,7 +104,6 @@ export async function POST(request: Request) {
         calorias: job.calorias,
         posicaoNaFila: job.posicaoNaFila,
         tempoEstimadoSegundos: job.tempoEstimadoSegundos,
-        captchaObrigatorio: captchaObrigatorio(),
       },
       { status: 202 },
     );

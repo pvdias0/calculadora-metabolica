@@ -4,11 +4,6 @@ interface ResultadoRateLimit {
   resetEmMs: number;
 }
 
-interface RespostaTurnstile {
-  success: boolean;
-  "error-codes"?: string[];
-}
-
 interface EstadoSegurancaDieta {
   requisicoesPorIp: Map<string, number[]>;
 }
@@ -24,8 +19,6 @@ const JANELA_RATE_LIMIT_MS = Number(
 const MAX_REQUISICOES_POR_JANELA = Number(
   process.env.DIETA_RATE_LIMIT_MAX_REQUESTS ?? 4,
 );
-const TURNSTILE_VERIFY_URL =
-  "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 function obterEstadoSeguranca() {
   if (!globalThis.__segurancaDietaState) {
@@ -163,60 +156,3 @@ export function limparEstadoRateLimit() {
   }
 }
 
-export function captchaObrigatorio() {
-  return (
-    process.env.DIETA_CAPTCHA_REQUIRED === "true" ||
-    Boolean(process.env.TURNSTILE_SECRET_KEY)
-  );
-}
-
-export async function validarCaptchaTurnstile({
-  token,
-  ip,
-}: {
-  token?: string;
-  ip: string;
-}) {
-  if (!captchaObrigatorio()) {
-    return;
-  }
-
-  const secret = process.env.TURNSTILE_SECRET_KEY;
-
-  if (!secret) {
-    throw new ErroSegurancaDieta(
-      "CAPTCHA obrigatório sem configuração do segredo do Turnstile.",
-      500,
-    );
-  }
-
-  if (!token) {
-    throw new ErroSegurancaDieta(
-      "Confirme o CAPTCHA antes de solicitar a dieta.",
-      400,
-    );
-  }
-
-  const response = await fetch(TURNSTILE_VERIFY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      secret,
-      response: token,
-      remoteip: ip,
-      idempotency_key: crypto.randomUUID(),
-    }),
-    cache: "no-store",
-  });
-
-  const dados = (await response.json()) as RespostaTurnstile;
-
-  if (!response.ok || !dados.success) {
-    throw new ErroSegurancaDieta(
-      "Falha na validação do CAPTCHA. Atualize o desafio e tente novamente.",
-      403,
-    );
-  }
-}
